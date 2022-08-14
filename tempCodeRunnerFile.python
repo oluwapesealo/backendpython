@@ -1,0 +1,8 @@
+from ctypes.wintypes import BOOL, BOOLEAN
+from tkinter import BooleanVar
+from xmlrpc.client import Boolean
+
+
+x=5
+y=bool(x)
+print(int(y))
