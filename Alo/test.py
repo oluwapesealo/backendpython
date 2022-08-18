@@ -171,7 +171,7 @@ class teamapproval(Resource):
     def __init__(self):
         self.TeamLead_Approval=''
         self.Reason_for_Decline=''
-        self.approval={'Approval':bool(self.TeamLead_Approval), 'Reason for Decline':str(self.Reason_for_Decline)}
+        self.approval={'Approvals':bool(self.TeamLead_Approval), 'Reason for Decline':str(self.Reason_for_Decline)}
     
 
         # return(self.approval)
