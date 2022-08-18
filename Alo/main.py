@@ -1,9 +1,12 @@
 
 import email
+from sqlite3 import Cursor
 from flask import Flask, request, jsonify, flash, redirect
 from flask_restful import Resource, Api, reqparse
-#import pandas as pd
-#import ast
+import pypyodbc as odbc 
+import mysql.connector
+from mysql.connector import Error
+
 
 app = Flask(__name__)
 api = Api(app)
@@ -14,33 +17,31 @@ class employees(Resource):
 #    inputData-> Username, password, department, position
 #    outputData-> token generated
 #     Logic-> Creates new user
+    def __init__(self):
+        self.ID=''
+        self.Email=''
+        self.Password=''
+        self.Department=''
+        self.Line_manager=''
+        self.Team_lead=''
+        self.Employee=''
+        self.create={'Email':str(self.Email), 'Password':str(self.Password),'Department':str(self.Department), 'Line Manager': bool(self.Line_manager),'Team Lead': bool(self.Team_lead), 'Employee':bool(self.Employee)}
+    def post(self):
+        return(self.create)
+        #function to schedule days
+    
     def get(self, create_employee):
-        return jsonify()
+        import pyodbc 
+        connect = pyodbc.connect('Driver={SQL Server};'
+        'Server=PESES-LAPTOP;'
+        'Database=employeedb;'
+        'Trusted_Connection=yes;')
 
-    def post(self, email, password1, password2, department, position):
-        email = request.form.get('email')
-        firstname = request.form.get('firstname')
-        password1 = request.form.get('password1')
-        password2 = request.form.get('password2')
-        department = request.form.get('department')
-        position = request.form.get('position')
+        cursor = connect.cursor()
 
-        new_employee = employees.query.filter_by(email=email).first()
-        if email:
-            flash('Email alraedy exists', category='error')
-
-        if len(email) < 4:
-            flash('Email is too short', category='error')
-
-        elif len(firstname) < 2:
-            flash('First Name is too short', category='error')
-        elif password1 != password2:
-            flash('Passwords don\'t match', category='error')
-        elif len(password1) < 7:
-            flash('Password must be greater than 7 characters', category='error')
-        else:
-            
-            flash('Account has been created successfully', category='success')
+        cursor.execute('''INSERT INTO employeetable1 VALUES (4,'oluwapse.lo@wemabank.com', 'peseao','IT',0 , 0, 1, '0', 0, 1, 1, 1, 1, 1)''')
+        connect.commit()
+        
         return redirect('/')
 api.add_resource(employees,'/createemployee')
 
@@ -51,10 +52,30 @@ class allrequests(Resource):
 #     Logic-> Once the endpoint is hit, the app returns the page that shows all the requests received by employees   
 
     def get(self, allrequest):
-        return request[allrequest]
-    
 
-api.add_resource(allrequests,'/showallrequests')
+
+        drivername='SQL SERVER'
+        servername='PESES-LAPTOP'
+        database='employeerq'
+        connection_string=f"""
+         DRIVER={{{drivername}}};
+         SERVER={servername};
+        DATABASE={database};
+        Trust_Connection=yes;
+            """ 
+        #connecting to the database
+        readdata=odbc.connect(connection_string)
+        #to read from sql database
+        SQL_Query=pd.read_sql_query('''SELECT * FROM[dbo].[employeereqs]''',readdata)
+        #storing sql database in python
+        finaldatabase=SQL_Query.head()
+        #coverting the table to a dictionar
+        requests= finaldatabase.to_dict('records')
+        return(requests)
+
+
+
+api.add_resource(allrequests,'/allrequests')
 
 class viewrequests(Resource):
 # 3) Endpoint name -> ViewRequestEndpoint
@@ -63,16 +84,8 @@ class viewrequests(Resource):
 #     Logic-> Once the endpoint is hit, the app returns the page that shows the selected request
     
     def get(self, viewrequest):
-        # {"sid": "SMxxxxxxxxxxxxxxx", 
-        # "date_created": "Thu, 09 Aug 2018 17:26:08 +0000", 
-        # "date_updated": "Thu, 09 Aug 2018 17:26:08 +0000", 
-        # "date_sent": null, 
-        # "to": "+15558675310",
-        # "from": "+15017122661",
-        # "body": "This is the ship that made the Kessel Run in fourteen parsecs?", 
-        # "direction": "outbound-api",
-        # "uri": "/2010-04-01/Accounts/ACxxxxxxxxx/Messages/SMxxxxxxxxxxxx.json
-#}
+       
+
         return requests[viewrequest]
 api.add_resource(requests,'/showallrequests/viewrequest/<requestid:str>')
 
@@ -106,8 +119,9 @@ import pandas as pd
 #     Logic-> The request will be downloaded in a csv. format.
 class downloadreq:
     def get(self, reqdownload):
+
         return requests[reqdownload]
 
-api.add_resource(lineapproval, '/showallrequests/viewrequest/<requestid:str>/linemanagerapproval')
+api.add_resource(downloadreq, '/showallrequests/viewrequest/<requestid:str>/linemanagerapproval')
 
      
