@@ -4,108 +4,156 @@ Created on Fri Aug  5 11:17:29 2022
 
 @author: hp
 """
-import urllib
-from urllib import response
+
 from xmlrpc.client import Boolean, boolean
 from sqlalchemy import create_engine
 import pypyodbc as odbc 
+import pyodbc
 import pandas as pd
 from flask import Flask,jsonify
 from flask_restful import Api,Resource
-import requests
-app=Flask(__name__)
-api=Api(app)
+from hashlib import sha256
+#function to hash password
+def hash(data):
+        hash_var=sha256((data).encode())
+        finalhash=hash_var.hexdigest()
+        return finalhash
 SERVER='DESKTOP-IEVPBEO'
 DATABASE='employeedb'
 DRIVER='SQL Server Native Client 11.0'
 USERNAME='chidubem'
 PASSWORD='ogbuefi'
+connect = pyodbc.connect('Driver={SQL Server};'
+            'Server=DESKTOP-IEVPBEO;'
+            'Database=employeedb;'
+            'Trusted_Connection=yes;')
+cursor = connect.cursor()
+email='chiamakaogbuefi@gmail.com'
+password=hash('chiamaka')
+app=Flask(__name__)
+api=Api(app)
+class login(Resource):
+    def get(self):
+        cursor = connect.cursor()
+        self.email=email
+        self.password=password
+        self.connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
+        self.engine = create_engine(self.connection_string)
+        self.connection=self.engine.connect()
+        sqltable=pd.read_sql_query('''SELECT * FROM [employeedb].[chidubem].[employe]''',self.connection)
+        finaltable1=pd.DataFrame(sqltable)
+        emailauthentication=(self.email in finaltable1['email'].unique())
+        if (emailauthentication==True):
+            passwordauthentication=(password in finaltable1['password'].unique())
+            if (passwordauthentication==True):
+                cursor = connect.cursor()
+                normalemployee=cursor.execute("select [normal employee] from [employeedb].[chidubem].[employe] where email=? ",self.email)
+                for i in normalemployee:
+                    pass
+                status=i[0]
+                if (status=="line manager"):
+                    employedas="you are a line manager"
+                    #take them line manger endpoint passed here
+                if(status=="employee"):
+                    employedas="you are an employee"
+                cursor.execute("update [employeedb].[chidubem].[employe] set token = 1 where email =? ",(self.email))
+                connect.commit()
+                connectstat=" and you have been connected succesfully"
+            else:
+                connectstat="incorrect password"
+        else:
+            connectstat= "user does not exist"
+        return employedas + ""+connectstat
+api.add_resource(login,'/login')
 class scheduledays(Resource):
-    def __init__(self):
-        self.Monday=''
-        self.Tuesday=''
-        self.Wednesday=''
-        self.Thursday=''
-        self.Friday=''
-        self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
     def post(self):
-        return(self.days)
-        #function to schedule days
-    def get(self):
-        self.Monday='1'
-        self.Tuesday='1'
-        self.Wednesday='1'
-        self.Thursday='1'
-        self.Friday='1'
-         #connecting to the databasE
-        self.connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
-        self.engine = create_engine(self.connection_string)
-        self.connection=self.engine.connect()
-        finalogb=pd.read_sql_query('''SELECT * FROM [employeedb].[chidubem].[employe]''',self.connection)
-        #modifying the days
-        finalogb.iloc[0,5]=int(bool(self.Monday))
-        finalogb.iloc[0,6]=int (bool (self.Tuesday))
-        finalogb.iloc[0,7]=int(bool (self.Wednesday))
-        finalogb.iloc[0,8]=int(bool (self.Thursday))
-        finalogb.iloc[0,9]=int(bool (self.Friday))
-        #storing the new data in sql
-        finalogb.to_sql('employe',con=self.engine,if_exists='replace',index=False)
-        self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
-        return(self.days)
+        self.email=email
+        y=cursor.execute("select token from [employeedb].[chidubem].[employe]  where email=? ",(self.email))
+        for a in y:
+            pass
+        newexpiry=int(a[0])
+        if (newexpiry==1):
+            x=0
+            self.Monday=1
+            self.Tuesday=1
+            self.Wednesday=0
+            self.Thursday=0
+            self.Friday=0
+            days=[self.Monday,self.Tuesday,self.Wednesday,self.Thursday,self.Friday]
+            for i in days:
+                if(i==1):
+                    x=x+1
+            if(x>2):
+                return("Error you chose more than the required amount of days required to work remotely please select only two days ")
+            else:
+                cursor.execute("update [employeedb].[chidubem].[employe] set monday = ? where email =? ",(self.Monday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set tuesday = ? where email =? ",(self.Tuesday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set wednesday = ? where email =? ",(self.Wednesday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set thursday = ? where email =? ",(self.Thursday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set friday = ? where email =? ",(self.Friday,self.email))
+                connect.commit()
+                self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
+                return(self.days)
+        else:
+            return"your session has expired"
     def patch(self):
-        self.connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
-        self.engine = create_engine(self.connection_string)
-        self.connection=self.engine.connect()
-        finalogb=pd.read_sql_query('''SELECT * FROM [employeedb].[chidubem].[employe]''',self.connection)
-        #modifying the days
-        finalogb.iloc[0,5]=int(bool(self.Monday))
-        finalogb.iloc[0,6]=int (bool (self.Tuesday))
-        finalogb.iloc[0,7]=int(bool (self.Wednesday))
-        finalogb.iloc[0,8]=int(bool (self.Thursday))
-        finalogb.iloc[0,9]=int(bool (self.Friday))
-        #storing the new data in sql
-        finalogb.to_sql('employe',con=self.engine,if_exists='replace',index=False)
-        self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
-        return(self.days)
-
+        y=cursor.execute("select token from [employeedb].[chidubem].[employe]  where email=? ",(self.email))
+        for a in y:
+            pass
+        newexpiry=int(a[0])
+        if (newexpiry==1):
+            x=0
+            self.Monday=1
+            self.Tuesday=1
+            self.Wednesday=0
+            self.Thursday=0
+            self.Friday=0
+            days=[self.Monday,self.Tuesday,self.Wednesday,self.Thursday,self.Friday]
+            for i in days:
+                if(i==1):
+                    x=x+1
+            if(x>2):
+                return("Error you chose more than the required amount of days required to work remotely please select only two days ")
+            else:
+                cursor.execute("update [employeedb].[chidubem].[employe] set monday = ? where email =? ",(self.Monday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set tuesday = ? where email =? ",(self.Tuesday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set wednesday = ? where email =? ",(self.Wednesday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set thursday = ? where email =? ",(self.Thursday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set friday = ? where email =? ",(self.Friday,self.email))
+                connect.commit()
+                self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
+                return(self.days)
+        else:
+            return"your session has expired"
 api.add_resource(scheduledays,'/scheduleddays')
-class sqlconnector(Resource):
-    def get(self):
-        #sql database
-
-        drivername='SQL SERVER'
-        servername='DESKTOP-IEVPBEO'
-        database='employeedb'
-        connection_string=f"""
-         DRIVER={{{drivername}}};
-         SERVER={servername};
-        DATABASE={database};
-        Trust_Connection=yes;
-            """ 
-        #connecting to the database
-        readdata=odbc.connect(connection_string)
-        #to read from sql database
-        SQL_Query=pd.read_sql_query('''SELECT * FROM[dbo].[employees]''',readdata)
-        #storing sql database in python
-        finaldatabase=SQL_Query.head()
-        #coverting the table to a dictionar
-        employee= finaldatabase.to_dict('records')
-        return(employee)
-api.add_resource(sqlconnector,"/sqldb")
 class logout(Resource):
     def post(self):
-        pass
-    #pass in the login page
-
+            self.email=email
+            cursor.execute("update [employeedb].[chidubem].[employe] set token = 0 where email =? ",(self.email))
+            connect.commit()
+            loggedout=cursor.execute("select token from [employeedb].[chidubem].[employe] where email=?",(self.email))
+            for i in loggedout:
+                pass
+            a=i[0]
+            success=int(a)
+            if(success==0):
+                return("you have been logged out succefully")
+            else:
+                return("error login out")
+        #pass in the login page
+api.add_resource(logout,'/logout')
 class linemanager(Resource):
     def get(self):
-        linemanagerresponse=False
-        if (linemanagerresponse==False):
-            #returning the updtae function
-            response=requests.patch("http://127.0.0.1:5000/scheduledays")
-            print(response.json())
+        self.email=email
+        linemanagerresponse=cursor.execute("select response from [employeedb].[chidubem].[employe] where email=?",(self.email))
+        for i in linemanagerresponse:
+            pass
+        a=i[0]
+        if(a=='approved'):
+            return("your response has been approved")
+        else:
+            return("your response has been denied and you are required to schedule your new remote days of work")
 api.add_resource(linemanager,"/linemanager")
-
 
 if __name__ =="__main__":
     app.run(debug=True)
