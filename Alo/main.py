@@ -83,23 +83,60 @@ class viewrequests(Resource):
 #    outputData-> Shows the selected request
 #     Logic-> Once the endpoint is hit, the app returns the page that shows the selected request
     
-    def get(self, viewrequest):
-       
+    def get(self):
+        drivername='SQL SERVER'
+        servername='PESES-LAPTOP'
+        database='employeerq'
+        connection_string=f"""
+         DRIVER={{{drivername}}};
+         SERVER={servername};
+        DATABASE={database};
+        Trust_Connection=yes;
+            """ 
+        #connecting to the database
+        readdata=odbc.connect(connection_string)
+        #to read from sql database
+        SQL_Query=pd.read_sql_query('''select *from employeereqs where userid = 1''',readdata)
+        #storing sql database in python
+        finaldatabase=SQL_Query.head()
+        #coverting the table to a dictionar
+        vrequests= finaldatabase.to_dict('records')
+        return(vrequests)
 
-        return requests[viewrequest]
-api.add_resource(requests,'/showallrequests/viewrequest/<requestid:str>')
+api.add_resource(viewrequests,'/allrequests/viewrequest1')
 
+class teamapproval(Resource):
 # 4) Endpoint name -> TeamLeadApprovalEndpoint
 #    inputData-> Token Response give reason for decline
 #    outputData-> 
 #     Logic-> If it is declined, forwards the response to the sender of the request and goes back to the show all requests page 
 # 	      If it is approved, forwards the request to the Line manager and goes back to the show all page
+    def __init__(self):
+        self.TeamLead_Approval=''
+        self.Reason_for_Decline=''
+        self.approval={'Approval':bool(self.TeamLead_Approval), 'Reason for Decline':str(self.Reason_for_Decline)}
+    
 
-class teamapproval(Resource):
+        # return(self.approval)
 
-    def put(self, teamapproval):
-        return redirect('/')
-api.add_resource(requests,'/showallrequests/viewrequest/<requestid:str>/teamleadapproval')
+    
+    def patch(self):
+        
+            import pyodbc 
+            connect = pyodbc.connect('Driver={SQL Server};'
+            'Server=PESES-LAPTOP;'
+            'Database=employeedb;'
+            'Trusted_Connection=yes;')
+
+            cursor = connect.cursor()
+            if self.TeamLead_Approval == True:
+                cursor.execute('''update employeereqs set TeamLead_Approval = 1 where userid =3''')
+                connect.commit()
+            if self.TeamLead_Approval == False:
+                cursor.execute('''update employeereqs set TeamLead_Approval = 0 where userid =3''') 
+                cursor.execute('''update employeereqs set Reason_for_Decline = "Traffic" where userid =3''')  
+            return redirect('/allrequests')
+api.add_resource(teamapproval,'/allrequests/viewrequest1/teamleadapproval')
 
 # 5) Endpoint name -> LineManagerApprovalEndpoint
 #    inputData-> Response and give reason for decline
@@ -107,20 +144,50 @@ api.add_resource(requests,'/showallrequests/viewrequest/<requestid:str>/teamlead
 #     Logic-> If it is denied, forwards the response to the sender of the request and goes back to the show all requests page 
 # 	      If it is approved, gives the user the option to download the approved request  
 
-class lineapproval:
-    def put(self, lineapproval):
-        return jsonify()
-api.add_resource(lineapproval, '/showallrequests/viewrequest/<requestid:str>/linemanagerapproval')    
+class linemanager(Resource):
+    def __init__(self):
+        self.LineManager_Approval=''
+        self.Reason_for_Decline=''
+        self.approval={'Approval':bool(self.LineManager_Approval), 'Reason for Decline':str(self.Reason_for_Decline)}
+    
+
+        # return(self.approval)
+
+    
+    def patch(self):
+        
+            import pyodbc 
+            connect = pyodbc.connect('Driver={SQL Server};'
+            'Server=PESES-LAPTOP;'
+            'Database=employeedb;'
+            'Trusted_Connection=yes;')
+
+            cursor = connect.cursor()
+            if self.LineManager_Approval == True:
+                cursor.execute('''update employeereqs set LineManager_Approval = 1 where userid =3''')
+                connect.commit()
+            if self.LineManager_Approval == False:
+                cursor.execute('''update employeereqs set LineManager_Approval = 0 where userid =3''') 
+                cursor.execute('''update employeereqs set Reason_for_Decline = "Traffic" where userid =3''')  
+            return redirect('/allrequests')
+api.add_resource(linemanager,'/allrequests/viewrequest1/teamleadapproval')
 
 import pandas as pd
+import pyodbc
  # 6)Endpoint name -> DownloadRequestEndpoint
 #    inputData-> Token
 #    outputData-> File
 #     Logic-> The request will be downloaded in a csv. format.
 class downloadreq:
     def get(self, reqdownload):
-
-        return requests[reqdownload]
+        connect = pyodbc.connect('Driver={SQL Server};'
+            'Server=PESES-LAPTOP;'
+            'Database=employeedb;'
+            'Trusted_Connection=yes;')
+        reqfile = pd.read_reqfile('''select *from employeereqs where userid = 1''', connect)
+        df = pd.DataFrame(reqfile)
+        df.to_csv()
+        return redirect('/allrequests')
 
 api.add_resource(downloadreq, '/showallrequests/viewrequest/<requestid:str>/linemanagerapproval')
 

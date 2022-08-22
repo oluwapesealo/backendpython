@@ -171,7 +171,7 @@ class teamapproval(Resource):
     def __init__(self):
         self.TeamLead_Approval=''
         self.Reason_for_Decline=''
-        self.approval={'Approvals':bool(self.TeamLead_Approval), 'Reason for Decline':str(self.Reason_for_Decline)}
+        self.approval={'Approval':bool(self.TeamLead_Approval), 'Reason for Decline':str(self.Reason_for_Decline)}
     
 
         # return(self.approval)
@@ -196,14 +196,34 @@ class teamapproval(Resource):
 api.add_resource(teamapproval,'/allrequests/viewrequest1/teamleadapproval')
 
 
-# class linemanager(Resource):
-#     def get(self):
-#         linemanagerresponse=False
-#         if (linemanagerresponse==False):
-#             #returning the updtae function
-#             response=requests.patch("http://127.0.0.1:5000/scheduledays")
-#             print(response.json())
-# api.add_resource(linemanager,"/linemanager")
+class linemanager(Resource):
+    def __init__(self):
+        self.LineManager_Approval=''
+        self.Reason_for_Decline=''
+        self.approval={'Approval':bool(self.LineManager_Approval), 'Reason for Decline':str(self.Reason_for_Decline)}
+    
+
+        # return(self.approval)
+
+    
+    def patch(self):
+        
+            import pyodbc 
+            connect = pyodbc.connect('Driver={SQL Server};'
+            'Server=PESES-LAPTOP;'
+            'Database=employeedb;'
+            'Trusted_Connection=yes;')
+
+            cursor = connect.cursor()
+            if self.LineManager_Approval == True:
+                cursor.execute('''update employeereqs set LineManager_Approval = 1 where userid =3''')
+                connect.commit()
+            if self.LineManager_Approval == False:
+                cursor.execute('''update employeereqs set LineManager_Approval = 0 where userid =3''') 
+                cursor.execute('''update employeereqs set Reason_for_Decline = "Traffic" where userid =3''')  
+            return redirect('/allrequests')
+api.add_resource(linemanager,'/allrequests/viewrequest1/teamleadapproval')
+
 
 
 if __name__ =="__main__":
