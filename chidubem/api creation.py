@@ -66,7 +66,7 @@ class login(Resource):
         return employedas + ""+connectstat
 api.add_resource(login,'/login')
 class scheduledays(Resource):
-    def post(self):
+    def post(self,Monday,Tuesday,Wednesday,Thursday,Friday):
         self.email=email
         y=cursor.execute("select token from [employeedb].[chidubem].[employe]  where email=? ",(self.email))
         for a in y:
@@ -74,11 +74,11 @@ class scheduledays(Resource):
         newexpiry=int(a[0])
         if (newexpiry==1):
             x=0
-            self.Monday=1
-            self.Tuesday=1
-            self.Wednesday=0
-            self.Thursday=0
-            self.Friday=0
+            self.Monday=Monday
+            self.Tuesday=Tuesday
+            self.Wednesday=Wednesday
+            self.Thursday=Thursday
+            self.Friday=Friday
             days=[self.Monday,self.Tuesday,self.Wednesday,self.Thursday,self.Friday]
             for i in days:
                 if(i==1):
@@ -96,18 +96,18 @@ class scheduledays(Resource):
                 return(self.days)
         else:
             return"your session has expired"
-    def patch(self):
+    def patch(self,Monday,Tuesday,Wednesday,Thursday,Friday):
         y=cursor.execute("select token from [employeedb].[chidubem].[employe]  where email=? ",(self.email))
         for a in y:
             pass
         newexpiry=int(a[0])
         if (newexpiry==1):
             x=0
-            self.Monday=1
-            self.Tuesday=1
-            self.Wednesday=0
-            self.Thursday=0
-            self.Friday=0
+            self.Monday=Monday
+            self.Tuesday=Tuesday
+            self.Wednesday=Wednesday
+            self.Thursday=Thursday
+            self.Friday=Friday
             days=[self.Monday,self.Tuesday,self.Wednesday,self.Thursday,self.Friday]
             for i in days:
                 if(i==1):
@@ -125,7 +125,7 @@ class scheduledays(Resource):
                 return(self.days)
         else:
             return"your session has expired"
-api.add_resource(scheduledays,'/scheduleddays')
+api.add_resource(scheduledays,"/scheduleddays/<int:Monday>/<int:Tuesday>/<int:Wednesday>/<int:Thursday>/<int:Friday>")
 class logout(Resource):
     def post(self):
             self.email=email
