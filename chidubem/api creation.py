@@ -29,8 +29,6 @@ connect = pyodbc.connect('Driver={SQL Server};'
             'Trusted_Connection=yes;')
 connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
 cursor = connect.cursor()
-email='chiamakaogbuefi@gmail.com'
-password=hash('chiamaka')
 app=Flask(__name__)
 api=Api(app)
 class login(Resource):
@@ -73,7 +71,7 @@ class login(Resource):
         return employedas + ""+connectstat
 api.add_resource(login,'/login/<string:email>/<string:unhashedpassword>')
 class scheduledays(Resource):
-    def post(self,Monday,Tuesday,Wednesday,Thursday,Friday):
+    def post(self,email,Monday,Tuesday,Wednesday,Thursday,Friday):
         self.email=email
         y=cursor.execute("select token from [employeedb].[chidubem].[employe]  where email=? ",(self.email))
         for a in y:
@@ -90,7 +88,13 @@ class scheduledays(Resource):
             for i in days:
                 if(i==1):
                     x=x+1
-            if(x>2):
+            if (self.Monday==1 and self.Tuesday==1):
+                return "you cannot pick consecutive days that follow monday and friday"
+            elif (self.Monday==1 and self.Friday==1):
+                return "you cannot pick consecutive days that follow monday and friday"
+            elif (self.Thursday==1 and self.Friday==1):
+                return "you cannot pick consecutive days that follow monday and friday"           
+            elif(x>2):
                 return("Error you chose more than the required amount of days required to work remotely please select only two days ")
             else:
                 cursor.execute("update [employeedb].[chidubem].[employe] set monday = ? where email =? ",(self.Monday,self.email))
@@ -101,8 +105,7 @@ class scheduledays(Resource):
                 pddays=cursor.execute("select monday,tuesday,wednesday,thursday,friday FROM [employeedb].[chidubem].[employe]  where email=?",(self.email))
                 xy=pd.DataFrame(pddays)
                 self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
-                d=xy.to_dict
-                return(d)
+                return(self.days)
         else:
             return"your session has expired"
     def patch(self,Monday,Tuesday,Wednesday,Thursday,Friday):
@@ -134,7 +137,7 @@ class scheduledays(Resource):
                 return(self.days)
         else:
             return"your session has expired"
-api.add_resource(scheduledays,"/scheduleddays/<int:Monday>/<int:Tuesday>/<int:Wednesday>/<int:Thursday>/<int:Friday>")
+api.add_resource(scheduledays,"/scheduleddays/<string:email>/<int:Monday>/<int:Tuesday>/<int:Wednesday>/<int:Thursday>/<int:Friday>")
 class logout(Resource):
     def post(self,email):
             self.email=email
@@ -153,18 +156,18 @@ class logout(Resource):
             
         #pass in the login page
 api.add_resource(logout,'/logout/<string:email>')
-class linemanager(Resource):
-    def get(self):
-        #passed after login
-        self.email=email
-        linemanagerresponse=cursor.execute("select response from [employeedb].[chidubem].[employe] where email=?",(self.email))
-        for i in linemanagerresponse:
-            pass
-        a=i[0]
-        if(a=='approved'):
-            return("your response has been approved")
-        else:
-            return("your response has been denied and you are required to schedule your new remote days of work")
-api.add_resource(linemanager,"/linemanager")
+# class linemanager(Resource):
+#     def get(self):
+#         #passed after login
+#         self.email=email
+#         linemanagerresponse=cursor.execute("select response from [employeedb].[chidubem].[employe] where email=?",(self.email))
+#         for i in linemanagerresponse:
+#             pass
+#         a=i[0]
+#         if(a=='approved'):
+#             return("your response has been approved")
+#         else:
+#             return("your response has been denied and you are required to schedule your new remote days of work")
+# api.add_resource(linemanager,"/linemanager")
 if __name__ =="__main__":
     app.run(debug=True)
