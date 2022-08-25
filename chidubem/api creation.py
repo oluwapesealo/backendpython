@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 import pypyodbc as odbc 
 import pyodbc
 import pandas as pd
-from flask import Flask,jsonify
+from flask import Flask,jsonify,redirect
 from flask_restful import Api,Resource
 from hashlib import sha256
 #function to hash password
@@ -27,16 +27,17 @@ connect = pyodbc.connect('Driver={SQL Server};'
             'Server=DESKTOP-IEVPBEO;'
             'Database=employeedb;'
             'Trusted_Connection=yes;')
+connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
 cursor = connect.cursor()
 email='chiamakaogbuefi@gmail.com'
 password=hash('chiamaka')
 app=Flask(__name__)
 api=Api(app)
 class login(Resource):
-    def get(self):
+    def get(self,email,unhashedpassword):
         cursor = connect.cursor()
         self.email=email
-        self.password=password
+        password=hash(unhashedpassword)
         self.connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
         self.engine = create_engine(self.connection_string)
         self.connection=self.engine.connect()
@@ -53,18 +54,24 @@ class login(Resource):
                 status=i[0]
                 if (status=="line manager"):
                     employedas="you are a line manager"
+                    #redirct(/"linemanager")
                     #take them line manger endpoint passed here
-                if(status=="employee"):
+                elif(status=="employee"):
+                    #redirect(/"employee")
                     employedas="you are an employee"
+                else:
+                    employedas="you dont have a role yet"
                 cursor.execute("update [employeedb].[chidubem].[employe] set token = 1 where email =? ",(self.email))
                 connect.commit()
                 connectstat=" and you have been connected succesfully"
             else:
+                employedas=""
                 connectstat="incorrect password"
         else:
+            employedas=""
             connectstat= "user does not exist"
         return employedas + ""+connectstat
-api.add_resource(login,'/login')
+api.add_resource(login,'/login/<string:email>/<string:unhashedpassword>')
 class scheduledays(Resource):
     def post(self,Monday,Tuesday,Wednesday,Thursday,Friday):
         self.email=email
@@ -91,9 +98,11 @@ class scheduledays(Resource):
                 cursor.execute("update [employeedb].[chidubem].[employe] set wednesday = ? where email =? ",(self.Wednesday,self.email))
                 cursor.execute("update [employeedb].[chidubem].[employe] set thursday = ? where email =? ",(self.Thursday,self.email))
                 cursor.execute("update [employeedb].[chidubem].[employe] set friday = ? where email =? ",(self.Friday,self.email))
-                connect.commit()
+                pddays=cursor.execute("select monday,tuesday,wednesday,thursday,friday FROM [employeedb].[chidubem].[employe]  where email=?",(self.email))
+                xy=pd.DataFrame(pddays)
                 self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
-                return(self.days)
+                d=xy.to_dict
+                return(d)
         else:
             return"your session has expired"
     def patch(self,Monday,Tuesday,Wednesday,Thursday,Friday):
@@ -127,7 +136,7 @@ class scheduledays(Resource):
             return"your session has expired"
 api.add_resource(scheduledays,"/scheduleddays/<int:Monday>/<int:Tuesday>/<int:Wednesday>/<int:Thursday>/<int:Friday>")
 class logout(Resource):
-    def post(self):
+    def post(self,email):
             self.email=email
             cursor.execute("update [employeedb].[chidubem].[employe] set token = 0 where email =? ",(self.email))
             connect.commit()
@@ -137,13 +146,16 @@ class logout(Resource):
             a=i[0]
             success=int(a)
             if(success==0):
+                #redirect('/login')
                 return("you have been logged out succefully")
             else:
                 return("error login out")
+            
         #pass in the login page
-api.add_resource(logout,'/logout')
+api.add_resource(logout,'/logout/<string:email>')
 class linemanager(Resource):
     def get(self):
+        #passed after login
         self.email=email
         linemanagerresponse=cursor.execute("select response from [employeedb].[chidubem].[employe] where email=?",(self.email))
         for i in linemanagerresponse:
@@ -154,6 +166,5 @@ class linemanager(Resource):
         else:
             return("your response has been denied and you are required to schedule your new remote days of work")
 api.add_resource(linemanager,"/linemanager")
-
 if __name__ =="__main__":
     app.run(debug=True)
