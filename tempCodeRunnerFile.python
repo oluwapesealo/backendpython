@@ -1,20 +1,3 @@
-import pandas as pd
-import pyodbc
-SERVER='DESKTOP-IEVPBEO'
-DATABASE='employeedb'
-DRIVER='SQL Server Native Client 11.0'
-USERNAME='chidubem'
-PASSWORD='ogbuefi'
-connect = pyodbc.connect('Driver={SQL Server};'
-            'Server=DESKTOP-IEVPBEO;'
-            'Database=employeedb;'
-            'Trusted_Connection=yes;')
-
-connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
-cursor = connect.cursor()
-email='chiamakaogbuefi@gmail.com'
-pddays=pd.read_sql_query(("select monday,tuesday,wednesday,thursday,friday FROM [employeedb].[chidubem].[employe]  where email='chiamaka@gmail.com'"),connection_string)
-xy=pd.DataFrame(pddays)
-# self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
-d=xy.to_dict
-print(pddays)
+a="where %s email =%s"
+print(a)
+print(a%"ogb","chi")

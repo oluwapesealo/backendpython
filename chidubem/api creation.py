@@ -5,14 +5,16 @@ Created on Fri Aug  5 11:17:29 2022
 @author: hp
 """
 
+from urllib import request
 from xmlrpc.client import Boolean, boolean
 from sqlalchemy import create_engine
 import pypyodbc as odbc 
 import pyodbc
 import pandas as pd
-from flask import Flask,jsonify,redirect
+from flask import Flask,jsonify,redirect,request
 from flask_restful import Api,Resource
 from hashlib import sha256
+import json
 #function to hash password
 def hash(data):
         hash_var=sha256((data).encode())
@@ -32,10 +34,11 @@ cursor = connect.cursor()
 app=Flask(__name__)
 api=Api(app)
 class login(Resource):
-    def get(self,email,unhashedpassword):
+    def post(self):
+        email_pass=request.get_json()
         cursor = connect.cursor()
-        self.email=email
-        password=hash(unhashedpassword)
+        self.email=email_pass['email']
+        password=hash(email_pass['password'])
         self.connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
         self.engine = create_engine(self.connection_string)
         self.connection=self.engine.connect()
@@ -69,64 +72,31 @@ class login(Resource):
             employedas=""
             connectstat= "user does not exist"
         return employedas + ""+connectstat
-api.add_resource(login,'/login/<string:email>/<string:unhashedpassword>')
+api.add_resource(login,'/login')
 class scheduledays(Resource):
-    def post(self,email,Monday,Tuesday,Wednesday,Thursday,Friday):
-        self.email=email
-        y=cursor.execute("select token from [employeedb].[chidubem].[employe]  where email=? ",(self.email))
-        for a in y:
-            pass
-        newexpiry=int(a[0])
-        if (newexpiry==1):
-            x=0
-            self.Monday=Monday
-            self.Tuesday=Tuesday
-            self.Wednesday=Wednesday
-            self.Thursday=Thursday
-            self.Friday=Friday
-            days=[self.Monday,self.Tuesday,self.Wednesday,self.Thursday,self.Friday]
-            for i in days:
-                if(i==1):
-                    x=x+1
-            if (self.Monday==1 and self.Tuesday==1):
-                return "you cannot pick consecutive days that follow monday and friday"
-            elif (self.Monday==1 and self.Friday==1):
-                return "you cannot pick consecutive days that follow monday and friday"
-            elif (self.Thursday==1 and self.Friday==1):
-                return "you cannot pick consecutive days that follow monday and friday"           
-            elif(x>2):
-                return("Error you chose more than the required amount of days required to work remotely please select only two days ")
-            else:
-                cursor.execute("update [employeedb].[chidubem].[employe] set monday = ? where email =? ",(self.Monday,self.email))
-                cursor.execute("update [employeedb].[chidubem].[employe] set tuesday = ? where email =? ",(self.Tuesday,self.email))
-                cursor.execute("update [employeedb].[chidubem].[employe] set wednesday = ? where email =? ",(self.Wednesday,self.email))
-                cursor.execute("update [employeedb].[chidubem].[employe] set thursday = ? where email =? ",(self.Thursday,self.email))
-                cursor.execute("update [employeedb].[chidubem].[employe] set friday = ? where email =? ",(self.Friday,self.email))
-                pddays=cursor.execute("select monday,tuesday,wednesday,thursday,friday FROM [employeedb].[chidubem].[employe]  where email=?",(self.email))
-                xy=pd.DataFrame(pddays)
-                self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
-                return(self.days)
+    def post(self):
+        data=request.get_json()
+        self.email=data['email']
+        x=0
+        self.Monday=data['Monday']
+        self.Tuesday=data['Tuesday']
+        self.Wednesday=data['Wednesday']
+        self.Thursday=data['Thursday']
+        self.Friday=data['Friday']
+        days=[self.Monday,self.Tuesday,self.Wednesday,self.Thursday,self.Friday]
+        for i in days:
+            if(i==1):
+                x=x+1
+        if (self.Monday==1 and self.Tuesday==1):
+             return "you cannot pick consecutive days that follow monday and friday"
+        elif (self.Monday==1 and self.Friday==1):
+            return "you cannot pick consecutive days that follow monday and friday"
+        elif (self.Thursday==1 and self.Friday==1):
+            return "you cannot pick consecutive days that follow monday and friday"           
+        elif(x>2):
+            return("Error you chose more than the required amount of days required to work remotely please select only two days ")
         else:
-            return"your session has expired"
-    def patch(self,Monday,Tuesday,Wednesday,Thursday,Friday):
-        y=cursor.execute("select token from [employeedb].[chidubem].[employe]  where email=? ",(self.email))
-        for a in y:
-            pass
-        newexpiry=int(a[0])
-        if (newexpiry==1):
-            x=0
-            self.Monday=Monday
-            self.Tuesday=Tuesday
-            self.Wednesday=Wednesday
-            self.Thursday=Thursday
-            self.Friday=Friday
-            days=[self.Monday,self.Tuesday,self.Wednesday,self.Thursday,self.Friday]
-            for i in days:
-                if(i==1):
-                    x=x+1
-            if(x>2):
-                return("Error you chose more than the required amount of days required to work remotely please select only two days ")
-            else:
+            try:
                 cursor.execute("update [employeedb].[chidubem].[employe] set monday = ? where email =? ",(self.Monday,self.email))
                 cursor.execute("update [employeedb].[chidubem].[employe] set tuesday = ? where email =? ",(self.Tuesday,self.email))
                 cursor.execute("update [employeedb].[chidubem].[employe] set wednesday = ? where email =? ",(self.Wednesday,self.email))
@@ -135,14 +105,45 @@ class scheduledays(Resource):
                 connect.commit()
                 self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
                 return(self.days)
+            except:
+                return("could not update scheduled days")
+    def patch(self,Monday,Tuesday,Wednesday,Thursday,Friday):
+        data=request.get_json()
+        self.email=data['email']
+        x=0
+        self.Monday=data['Monday']
+        self.Tuesday=data['Tuesday']
+        self.Wednesday=data['Wednesday']
+        self.Thursday=data['Thursday']
+        self.Friday=data['Friday']
+        days=[self.Monday,self.Tuesday,self.Wednesday,self.Thursday,self.Friday]
+        for i in days:
+            if(i==1):
+                x=x+1
+        if (self.Monday==1 and self.Tuesday==1):
+             return "you cannot pick consecutive days that follow monday and friday"
+        elif (self.Monday==1 and self.Friday==1):
+            return "you cannot pick consecutive days that follow monday and friday"
+        elif (self.Thursday==1 and self.Friday==1):
+            return "you cannot pick consecutive days that follow monday and friday"           
+        elif(x>2):
+            return("Error you chose more than the required amount of days required to work remotely please select only two days ")
         else:
-            return"your session has expired"
-api.add_resource(scheduledays,"/scheduleddays/<string:email>/<int:Monday>/<int:Tuesday>/<int:Wednesday>/<int:Thursday>/<int:Friday>")
+            try:
+                cursor.execute("update [employeedb].[chidubem].[employe] set monday = ? where email =? ",(self.Monday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set tuesday = ? where email =? ",(self.Tuesday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set wednesday = ? where email =? ",(self.Wednesday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set thursday = ? where email =? ",(self.Thursday,self.email))
+                cursor.execute("update [employeedb].[chidubem].[employe] set friday = ? where email =? ",(self.Friday,self.email))
+                connect.commit()
+                self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
+                return(self.days)
+            except:
+                return("could not update scheduled days")
+api.add_resource(scheduledays,"/scheduleddays")
 class logout(Resource):
     def post(self,email):
             self.email=email
-            cursor.execute("update [employeedb].[chidubem].[employe] set token = 0 where email =? ",(self.email))
-            connect.commit()
             loggedout=cursor.execute("select token from [employeedb].[chidubem].[employe] where email=?",(self.email))
             for i in loggedout:
                 pass
