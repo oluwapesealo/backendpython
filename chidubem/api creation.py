@@ -171,4 +171,5 @@ api.add_resource(logout,'/logout/<string:email>')
 #             return("your response has been denied and you are required to schedule your new remote days of work")
 # api.add_resource(linemanager,"/linemanager")
 if __name__ =="__main__":
-    app.run(debug=True)
+    app.run(host='192.168.213.165',debug=True)
+    
