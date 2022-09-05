@@ -1,3 +1,9 @@
-a="where %s email =%s"
-print(a)
-print(a%"ogb","chi")
+from datetime import datetime, timedelta
+x=(datetime.utcnow() -timedelta(seconds=60))
+y=datetime.utcnow()
+if(x>y):
+    print("time + 60 sec is greater than time now")
+if(x<y):
+    print("time now is gretaer than time + 60 sec is greater ")
+print("time = 60 sec =",x)
+print("time now=",y)
