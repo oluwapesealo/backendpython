@@ -46,10 +46,11 @@ connect = pyodbc.connect('Driver={SQL Server};'
             'Trusted_Connection=yes;')
 connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
 cursor = connect.cursor()
-def tokenauthent():
-    x=1
-    if (x==0):
-        return{"message":"your token has expired"}
-    elif(x==1):
-        return {"message":"token is valid"}
-print(tokenauthent()['message'])
+# def tokenauthent():
+#     x=1
+#     if (x==0):
+#         return{"message":"your token has expired"}
+#     elif(x==1):
+#         return {"message":"token is valid"}
+# print(tokenauthent()['message'])
+print(os.getenv("name"))
