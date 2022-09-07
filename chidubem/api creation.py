@@ -26,7 +26,7 @@ def hash(data):
 def tokenauthent(email,key):
         if 'tokenauth' in request.headers:
                 token = request.headers['tokenauth']
-                tokget=cursor.execute("select token from [employeedb].[chidubem].[employe] where email=?",email)
+                tokget=cursor.execute(os.getenv("tokenselect"),email)
                 for ai in tokget:
                     pass
                 if(bool(ai[0])==True):
@@ -68,8 +68,12 @@ class login(Resource):
         finaltable1=pd.DataFrame(sqltable)
         emailauthentication=(self.email in finaltable1['email'].unique())
         if (emailauthentication==True):
-            passwordauthentication=(password in finaltable1['password'].unique())
-            if (passwordauthentication==True):
+            # passwordauthentication=(password in finaltable1['password'].unique())
+            passwordauthentication=cursor.execute("select password from [employeedb].[chidubem].[employe] where email=",self.email)
+            for passw in passwordauthentication:
+                pass
+
+            if (passw[0]==password):
                 cursor = connect.cursor()
                 normalemployee=cursor.execute(str(os.getenv("normalemployee")),self.email)
                 for i in normalemployee:
@@ -93,7 +97,7 @@ class login(Resource):
                      "message":"connected",
                     'expiration': str(datetime.utcnow() + timedelta(seconds=999))
                     },key)
-                    cursor.execute("update [employeedb].[chidubem].[employe] set token=? where email=?",str(encodedtoken),self.email)
+                    cursor.execute(os.getenv("updatetoken"),str(encodedtoken),self.email)
                     connect.commit()
             
             else:
@@ -132,14 +136,13 @@ class scheduledays(Resource):
                 return("Error you chose more than the required amount of days required to work remotely please select only two days ")
             else:
                 try:
-                    cursor.execute("update [employeedb].[chidubem].[employe] set monday = ? where email =? ",(self.Monday,self.email))
-                    cursor.execute("update [employeedb].[chidubem].[employe] set tuesday = ? where email =? ",(self.Tuesday,self.email))
-                    cursor.execute("update [employeedb].[chidubem].[employe] set wednesday = ? where email =? ",(self.Wednesday,self.email))
-                    cursor.execute("update [employeedb].[chidubem].[employe] set thursday = ? where email =? ",(self.Thursday,self.email))
-                    cursor.execute("update [employeedb].[chidubem].[employe] set friday = ? where email =? ",(self.Friday,self.email))
+                    cursor.execute(os.getenv("monday"),(self.Monday,self.email))
+                    cursor.execute(os.getenv("tuesday"),(self.Tuesday,self.email))
+                    cursor.execute(os.getenv("wednesday"),(self.Wednesday,self.email))
+                    cursor.execute(os.getenv("thursday"),(self.Thursday,self.email))
+                    cursor.execute(os.getenv("friday"),(self.Friday,self.email))
                     connect.commit()
-                    self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
-                    return{"message":"token is valid and scheduleddays assinged succefully"}
+                    return{"message":"token is valid and scheduleddays assinged succefully",'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
                 except:
                     return{"message":("could not update scheduled days")}
         elif (tokenfunc['message']=="token expired"):
@@ -150,10 +153,10 @@ class scheduledays(Resource):
 
         else:
             return{"message":"token not inlcuded"}
-    def patch(self,Monday,Tuesday,Wednesday,Thursday,Friday):
+    def patch(self):
         data=request.get_json()
         self.email=data['email']
-        tokenfunc=tokenauthent(self.email,os.getenv("key"))
+        tokenfunc=tokenauthent(self.email,str(os.getenv("key")))
         if (tokenfunc['message']=="token is valid"):
             data=request.get_json()
             self.email=data['email']
@@ -177,18 +180,21 @@ class scheduledays(Resource):
                 return("Error you chose more than the required amount of days required to work remotely please select only two days ")
             else:
                 try:
-                    cursor.execute("update [employeedb].[chidubem].[employe] set monday = ? where email =? ",(self.Monday,self.email))
-                    cursor.execute("update [employeedb].[chidubem].[employe] set tuesday = ? where email =? ",(self.Tuesday,self.email))
-                    cursor.execute("update [employeedb].[chidubem].[employe] set wednesday = ? where email =? ",(self.Wednesday,self.email))
-                    cursor.execute("update [employeedb].[chidubem].[employe] set thursday = ? where email =? ",(self.Thursday,self.email))
-                    cursor.execute("update [employeedb].[chidubem].[employe] set friday = ? where email =? ",(self.Friday,self.email))
+                    cursor.execute(os.getenv("monday"),(self.Monday,self.email))
+                    cursor.execute(os.getenv("tuesday"),(self.Tuesday,self.email))
+                    cursor.execute(os.getenv("wednesday"),(self.Wednesday,self.email))
+                    cursor.execute(os.getenv("thursday"),(self.Thursday,self.email))
+                    cursor.execute(os.getenv("friday"),(self.Friday,self.email))
                     connect.commit()
-                    self.days={'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
-                    return{"message":"token is valid and scheduleddays assinged succefully"}
+                    return{"message":"token is valid and scheduleddays have been updated succefully for "+self.email,'Monday':bool(self.Monday),'Tuesday':bool(self.Tuesday),'Wednesday':bool(self.Wednesday),'Thursday':bool(self.Thursday),'Friday':bool(self.Friday)}
                 except:
-                    return{"message":("could not update scheduled days")}
+                    return{"message":("could not update scheduled days for "+self.email)}
         elif (tokenfunc['message']=="token expired"):
             return{"message":"token expired"}
+
+        elif(tokenfunc['message']=="token verification failed"):
+            return{"message":"token verification failed"}
+
         else:
             return{"message":"token not inlcuded"}
 api.add_resource(scheduledays,"/scheduleddays")
@@ -196,7 +202,7 @@ class logout(Resource):
     def post(self):
             data=request.get_json()
             self.email=data['email']
-            loggedout=cursor.execute("select token from [employeedb].[chidubem].[employe] where email=?",(self.email))
+            loggedout=cursor.execute(os.getenv("selecttoken"),(self.email))
             for i in loggedout:
                 pass
             token=i[0]
@@ -204,7 +210,7 @@ class logout(Resource):
             decodedtoken['expiration']=str(datetime.utcnow() - timedelta(seconds=999))
             loggedouttoken=jwt.encode((decodedtoken),key=str(os.getenv("key")))
             try:
-                cursor.execute("update [employeedb].[chidubem].[employe] set token=? where email=?",str(loggedouttoken),self.email)
+                cursor.execute(os.getenv("updatetoken"),str(loggedouttoken),self.email)
                 connect.commit()
                 return{"message":"you have been logged out succefully"}
             except:
