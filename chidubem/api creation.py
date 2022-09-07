@@ -2,13 +2,11 @@
 """
 Created on Fri Aug  5 11:17:29 2022
 
-@author: hp
+@author: chidubem ogbuefi
 """
-from asyncio.windows_events import NULL
 from datetime import datetime,timedelta
 from urllib import request
 from sqlalchemy import create_engine
-import pypyodbc as odbc 
 import pyodbc
 import pandas as pd
 from flask import Flask,jsonify,request
@@ -69,7 +67,7 @@ class login(Resource):
         emailauthentication=(self.email in finaltable1['email'].unique())
         if (emailauthentication==True):
             # passwordauthentication=(password in finaltable1['password'].unique())
-            passwordauthentication=cursor.execute("select password from [employeedb].[chidubem].[employe] where email=",self.email)
+            passwordauthentication=cursor.execute("select password from [employeedb].[chidubem].[employe] where email=?",self.email)
             for passw in passwordauthentication:
                 pass
 
@@ -202,7 +200,7 @@ class logout(Resource):
     def post(self):
             data=request.get_json()
             self.email=data['email']
-            loggedout=cursor.execute(os.getenv("selecttoken"),(self.email))
+            loggedout=cursor.execute(os.getenv("tokenselect"),(self.email))
             for i in loggedout:
                 pass
             token=i[0]
@@ -210,7 +208,7 @@ class logout(Resource):
             decodedtoken['expiration']=str(datetime.utcnow() - timedelta(seconds=999))
             loggedouttoken=jwt.encode((decodedtoken),key=str(os.getenv("key")))
             try:
-                cursor.execute(os.getenv("updatetoken"),str(loggedouttoken),self.email)
+                cursor.execute(str(os.getenv("updatetoken")),str(loggedouttoken),self.email)
                 connect.commit()
                 return{"message":"you have been logged out succefully"}
             except:
@@ -231,7 +229,7 @@ class roles(Resource):
         tokenfunc=tokenauthent(self.email,str(os.getenv("key")))
         if (tokenfunc['message']=="token is valid"):
             # to return available roles
-            x=cursor.execute("Select [roles] , [Description_] FROM [employeedb].[dbo].[Roles] ")
+            x=cursor.execute(os.getenc("rolesselect"))
             roles=[]
             for row in x:
                 roles.append({"role" :row[0],"Description":row[1]})
@@ -251,7 +249,7 @@ class roles(Resource):
         tokenfunc=tokenauthent(self.email,str(os.getenv("key")))
         if (tokenfunc['message']=="token is valid"):
             try:
-                cursor.execute("INSERT INTO [employeedb].[dbo].[Roles] (Roles, DesignationID,Description_) VALUES (?, ?,?)",(data['Role'],data['DesignationID'],data['Description']))
+                cursor.execute(os.getenv("rolesinsert"),(data['Role'],data['DesignationID'],data['Description']))
                 connect.commit()
                 return{"message":"role added succesfully"}
             except:
@@ -274,7 +272,7 @@ class designtion(Resource):
         tokenfunc=tokenauthent(self.email,str(os.getenv("key")))
         if (tokenfunc['message']=="token is valid"):
             # to return available roles
-            x=cursor.execute("Select [Designation],[Description_] FROM [employeedb].[dbo].[Designation] ")
+            x=cursor.execute(os.getenv("designationcreate"))
             roles=[]
             for row in x:
                 roles.append({"Description":row[1],"Designation":row[0]})
@@ -293,7 +291,7 @@ class designtion(Resource):
         tokenfunc=tokenauthent(self.email,str(os.getenv("key")))
         if (tokenfunc['message']=="token is valid"):
             try:
-                cursor.execute("INSERT INTO [employeedb].[dbo].[Designation] (Designation,Description_) VALUES (?, ?)",(data['Designation'],data['Description']))
+                cursor.execute(os.getenv("designationinsert"),(data['Designation'],data['Description']))
                 connect.commit()
                 return{"message":"desingtion added succesfully"}
             except:
