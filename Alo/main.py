@@ -1,14 +1,13 @@
-import json
-import re
-from sqlalchemy import create_engine
-from sqlite3 import Cursor
-from flask import Flask, request, redirect
+
+from flask import Flask, request, redirect, jsonify
 from flask_restful import Resource, Api
 from flask_cors import CORS 
 import pypyodbc as odbc 
 import pandas as pd
 import pyodbc
 from hashlib import sha256
+import datetime
+import jwt
 def hash(data):
         hash_var=sha256((data).encode())
         finalhash=hash_var.hexdigest()
@@ -23,20 +22,15 @@ cors = CORS(app, resources={
     }
 })
 
+app.config['SECRET_KEY'] = 'oluwapesealo'
 
 #1) Endpoint name -> CreateEndpoint
 #    inputData-> Username, password, department, position
 #    outputData-> token generated
 #     Logic-> Creates new user
 class employees(Resource):
-    # def __init__(self, Email='', unhashedpassword='', Department='', Status=''):
-    #     self.Email= Email
-    #     self.Password=unhashedpassword
-    #     self.Department=Department
-    #     self.Status=Status
 
-    
-    def post(self, Email='', unhashedpassword='', Department='', Status=''):
+    def post(self):
  
         content_type = request.headers.get('Content-Type')
         if (content_type == 'application/json'):
@@ -45,24 +39,51 @@ class employees(Resource):
         else:
             return 'Content-Type not supported!'
         
+        drivername='SQL SERVER'
+        servername='PESES-LAPTOP'
+        database='employeedb'
+        connection_string=f"""
+         DRIVER={{{drivername}}};
+         SERVER={servername};
+        DATABASE={database};
+        Trust_Connection=yes;
+            """ 
+        #connecting to the database
+        readdata=odbc.connect(connection_string)
+        #to read from sql database
+        SQL_Query=pd.read_sql_query('''select Email from employeetable2''',readdata)
+        #storing sql database in python
+        #coverting the table to a dictionar
+        emailtable= pd.DataFrame(SQL_Query)
+
         connect = pyodbc.connect('Driver={SQL Server};'
         'Server=PESES-LAPTOP;'
         'Database=employeedb;'
         'Trusted_Connection=yes;')
         
-#        if re.fullmatch(r'[A-Za-z0-9@#$%^&+=]{8,}', unhashedpassword):
-       # Password=hash(unhashedpassword)
- #       else:
-  #          return 'Invalid Password'
+        Password=hash(json['unhashedpassword'])
 
         cursor = connect.cursor()
-        cursor.execute('''INSERT INTO employeetable2 VALUES (?,?,?,?,'NULL', 'NULL', 'NULL', 0, 0, 0, 0, 0)''',(json["Email"], json["unhashedpassword"], json["Department"], json["Status"]))
-        
-        connect.commit()
-        success='sign up was successful'
-        return success
+        emailexist=(json["Email"] in emailtable['email'].unique())
+        if (emailexist==True):
+            return "email already exists "
+        else:
+            cursor.execute('''INSERT INTO employeetable2 VALUES (?,?,?,?,'NULL', 'NULL', 'NULL', 0, 0, 0, 0, 0)''',(json["Email"], Password, json["Department"], json["Status"]))
+            connect.commit()
+            success='sign up was successful'
+            return success
 api.add_resource(employees,'/createemployee')
 
+def tokenauth():
+    auth = request.authorization
+    if auth and auth.password == 'Password':
+       token = jwt.encode({'user':auth.email, 'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=60) }, app.config['SECRET_KEY'])
+
+       return jsonify({'message':'Token is valid, continue'})
+
+class updateinfo(Resource):
+    def patch(self):
+        pass
 
 # 2) Endpoint name -> ShowallRequestsEndpoint
 #    inputData-> Token	
@@ -80,13 +101,9 @@ class allrequests(Resource):
         DATABASE={database};
         Trust_Connection=yes;
             """ 
-        #connecting to the database
         readdata=odbc.connect(connection_string)
-        #to read from sql database
         SQL_Query=pd.read_sql_query('''SELECT * FROM[dbo].[employeereqs]''',readdata)
-        #storing sql database in python
         finaldatabase=SQL_Query.head()
-        #coverting the table to a dictionar
         requests= finaldatabase.to_dict('records')
         return(requests)
 
@@ -99,23 +116,8 @@ api.add_resource(allrequests,'/allrequests')
 #     Logic-> Once the endpoint is hit, the app returns the page that shows the selected request
 # requests={}
 class viewrequests(Resource):
-   # def __init__(self, Email=''):
-   #     self.Email= Email
 
     def get(self,Email=''):
-        # requests=[]
-        # connect = pyodbc.connect('Driver={SQL Server};'
-        #     'Server=PESES-LAPTOP;'
-        #     'Database=employeedb;'
-        #     'Trusted_Connection=yes;')
-
-        # cursor = connect.cursor()
-        # cursor.execute('''select *from employeereqs where Email = ?''', (Email))
-        # vrequests=cursor.fetchall()
-        # for request in vrequests:
-        #     requests.append([x for x in request])
-        # return json.dumps(requests)
-
 
         drivername='SQL SERVER'
         servername='PESES-LAPTOP'
@@ -126,18 +128,13 @@ class viewrequests(Resource):
         DATABASE={database};
         Trust_Connection=yes;
             """ 
-        #connecting to the database
         readdata=odbc.connect(connection_string)
-        #to read from sql database
         SQL_Query=pd.read_sql_query('''select *from employeereqs where Email ='''+Email, readdata,)
-        #storing sql database in python
         finaldatabase=SQL_Query.head()
-        #coverting the table to a dictionar
         vrequests= finaldatabase.to_dict('records')
         return(vrequests)
         
         
-
 api.add_resource(viewrequests,'/allrequests/viewrequest/<string:Email>')
 
 
@@ -147,15 +144,7 @@ api.add_resource(viewrequests,'/allrequests/viewrequest/<string:Email>')
 #     Logic-> If it is declined, forwards the response to the sender of the request and goes back to the show all requests page 
 # 	      If it is approved, forwards the request to the Line manager and goes back to the show all page
 class teamapproval(Resource):
-    # def __init__(self):
-    #     self.TeamLead_Approval=''
-    #     self.Reason_for_Decline=''
-    #     self.approval={'Approval':bool(self.TeamLead_Approval), 'Reason for Decline':str(self.Reason_for_Decline)}
-    
 
-    #     # return(self.approval)
-
-    
     def patch(self, Email='', TeamLead_Approval='',Reason_For_Decline=''):
             self.Email=Email
             self.TeamLead_Approval=TeamLead_Approval
@@ -182,14 +171,6 @@ api.add_resource(teamapproval,'/allrequests/viewrequest/<string:Email>/teamleada
 # 	      If it is approved, gives the user the option to download the approved request  
 
 class linemanager(Resource):
-    def __init__(self):
-        self.LineManager_Approval=''
-        self.Reason_for_Decline=''
-        self.approval={'Approval':bool(self.LineManager_Approval), 'Reason for Decline':str(self.Reason_for_Decline)}
-    
-
-        # return(self.approval)
-
     
     def patch(self, Email='', Linemanager_Approval='', Reason_For_Decline=''):
             self.Email=Email
@@ -226,9 +207,6 @@ api.add_resource(linemanager,'/allrequests/viewrequest/<string:Email>/linemanage
 #     Logic-> The request will be downloaded in a csv. format.
 
 class downloadreq(Resource):
-
-    # def __init__(self, Email=''):
-    #     self.Email= Email
     def get(self,Email=''):
         self.Email=Email
         
