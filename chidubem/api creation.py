@@ -247,7 +247,7 @@ class roles(Resource):
         tokenfunc=tokenauthent(self.email,str(os.getenv("key")))
         if (tokenfunc['message']=="token is valid"):
             # to return available roles
-            x=cursor.execute(os.getenc("rolesselect"))
+            x=cursor.execute(os.getenv("rolesselect"))
             roles=[]
             for row in x:
                 roles.append({"role" :row[0],"Description":row[1]})
