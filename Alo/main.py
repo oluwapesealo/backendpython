@@ -355,7 +355,7 @@ class downloadreq(Resource):
         Trust_Connection=yes;
             """ 
         readdata=odbc.connect(connection_string)
-        SQL_Query=pd.read_sql_query('''select *from Requests where Email ='''+Email, readdata,)
+        SQL_Query=pd.read_sql_query('''select *from ScheduleDays where Email = ?'''+Email, readdata,)
         df = pd.DataFrame(SQL_Query)
         down = df.to_csv(Email+".csv")
         success = 'Download was successful'
