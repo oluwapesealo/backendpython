@@ -1,1 +1,32 @@
-o
+from genericpath import exists
+from select import select
+from urllib import request
+from xmlrpc.client import Boolean, boolean
+from sqlalchemy import create_engine
+import pypyodbc as odbc 
+import pyodbc
+import pandas as pd
+from flask import Flask,jsonify,redirect,request
+from flask_restful import Api,Resource
+from hashlib import sha256
+import json
+import os
+from dotenv import load_dotenv
+load_dotenv()
+app=Flask(__name__)
+api=Api(app)
+SERVER='DESKTOP-IEVPBEO'
+DATABASE='employeedb'
+DRIVER='SQL Server Native Client 11.0'
+USERNAME='chidubem'
+PASSWORD='ogbuefi'
+connect = pyodbc.connect('Driver={SQL Server};'
+            'Server=DESKTOP-IEVPBEO;'
+            'Database=employeedb;'
+            'Trusted_Connection=yes;')
+connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
+cursor = connect.cursor()
+tokget=cursor.execute("select token from [employeedb].[dbo].[Token] where id=1")
+for ai in tokget:
+    pass
+print(bool(ai[0]))

@@ -1,13 +1,16 @@
+from datetime import datetime, timedelta
 from urllib import request
 from xmlrpc.client import Boolean, boolean
-from sqlalchemy import create_engine
 import pypyodbc as odbc 
 import pyodbc
 import pandas as pd
-from flask import Flask,jsonify,redirect,request
+from flask import Flask,jsonify,request
 from flask_restful import Api,Resource
 from hashlib import sha256
-import json
+import os
+import jwt
+from dotenv import load_dotenv
+load_dotenv()
 app=Flask(__name__)
 api=Api(app)
 SERVER='DESKTOP-IEVPBEO'
@@ -21,48 +24,105 @@ connect = pyodbc.connect('Driver={SQL Server};'
             'Trusted_Connection=yes;')
 connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
 cursor = connect.cursor()
+def tokenauthent(email,key):
+        if 'tokenauth' in request.headers:
+                token = request.headers['tokenauth']
+                tokget=cursor.execute("select token from [employeedb].[chidubem].[employe] where email=?",email)
+                for ai in tokget:
+                    pass
+                if(bool(ai[0])==True):
+                    try:
+                        decodedtoken=jwt.decode(ai[0], key=key, algorithms=['HS256', ])
+                        if(decodedtoken['expiration']<str(datetime.utcnow())):
+                            return{"message":"token expired"}
+                        else:
+                            return {"token":ai[0],"message":"token is valid"}
+                    except:
+                        return{"message":"token verification failed"}
+        else:
+            return{"message":"token not included"}
 class roles(Resource):
     def get(self):
-        # to return available roles
-        x=cursor.execute("Select roles FROM [employeedb].[dbo].[Roles] ")
-        db=pd.read_sql("Select roles FROM [employeedb].[dbo].[Roles] ",connection_string)
-        ogb=db.to_dict('records')
-        roles=[]
-        i=1
-        for row in x:
-           roles.append({"role"+str(i) :row[0]})
-           i=i+1
-        return jsonify(roles)
+        data=request.get_json()
+        self.email=data['email']
+        tokenfunc=tokenauthent(self.email,str(os.getenv("key")))
+        if (tokenfunc['message']=="token is valid"):
+            # to return available roles
+            x=cursor.execute("Select [roles] , [Description_] FROM [employeedb].[dbo].[Roles] ")
+            roles=[]
+            for row in x:
+                roles.append({"role" :row[0]})
+            return jsonify(roles)
+        elif (tokenfunc['message']=="token expired"):
+            return{"message":"token expired"}
+
+        elif(tokenfunc['message']=="token verification failed"):
+            return{"message":"token verification failed"}
+
+        else:
+            return{"message":"token not inlcuded"}
 
     def post(self):
         data=request.get_json()
-        try:
-            cursor.execute("INSERT INTO [employeedb].[dbo].[Roles] (Roles, DesignationID,Description_) VALUES (?, ?,?)",(data['Role'],data['DesignationID'],data['Description']))
-            connect.commit()
-            return("role added succesfully")
-        except:
-            return ("failed to add role")
+        self.email=data['email']
+        tokenfunc=tokenauthent(self.email,str(os.getenv("key")))
+        if (tokenfunc['message']=="token is valid"):
+            try:
+                cursor.execute("INSERT INTO [employeedb].[dbo].[Roles] (Roles, DesignationID,Description_) VALUES (?, ?,?)",(data['Role'],data['DesignationID'],data['Description']))
+                connect.commit()
+                return{"message":"role added succesfully"}
+            except:
+                return {"message":"failed to add role"}
+
+        elif (tokenfunc['message']=="token expired"):
+            return{"message":"token expired"}
+
+        elif(tokenfunc['message']=="token verification failed"):
+            return{"message":"token verification failed"}
+
+        else:
+            return{"message":"token not inlcuded"}
 
 api.add_resource(roles,"/roles")
 class designtion(Resource):
     def get(self):
-        # to return available roles
-        x=cursor.execute("Select Designation FROM [employeedb].[dbo].[Designation] ")
-        roles=[]
-        i=1
-        for row in x:
-           roles.append({"Designation"+str(i) :row[0]})
-           i=i+1
-        return jsonify(roles)
+        data=request.get_json()
+        self.email=data['email']
+        tokenfunc=tokenauthent(self.email,str(os.getenv("key")))
+        if (tokenfunc['message']=="token is valid"):
+            # to return available roles
+            x=cursor.execute("Select [Designation],[Description_] FROM [employeedb].[dbo].[Designation] ")
+            roles=[]
+            for row in x:
+                roles.append({"Description":row[0],"Designation":row[1]})
+            return jsonify(roles)
+        elif (tokenfunc['message']=="token expired"):
+            return{"message":"token expired"}
 
+        elif(tokenfunc['message']=="token verification failed"):
+                return{"message":"token verification failed"}
+
+        else:
+            return{"message":"token not inlcuded"}
     def post(self):
         data=request.get_json()
-        try:
-            cursor.execute("INSERT INTO [employeedb].[dbo].[Designation] (Designation,Description_) VALUES (?, ?)",(data['Designation'],data['Description']))
-            connect.commit()
-            return("desingtion added succesfully")
-        except:
-            return ("failed to add desination")
+        self.email=data['email']
+        tokenfunc=tokenauthent(self.email,str(os.getenv("key")))
+        if (tokenfunc['message']=="token is valid"):
+            try:
+                cursor.execute("INSERT INTO [employeedb].[dbo].[Designation] (Designation,Description_) VALUES (?, ?)",(data['Designation'],data['Description']))
+                connect.commit()
+                return{"message":"desingtion added succesfully"}
+            except:
+                return {"message":"failed to add destination"}
+        elif (tokenfunc['message']=="token expired"):
+            return{"message":"token expired"}
+
+        elif(tokenfunc['message']=="token verification failed"):
+                return{"message":"token verification failed"}
+
+        else:
+            return{"message":"token not inlcuded"}
 api.add_resource(designtion,"/designation")
 if __name__ =="__main__":
     app.run(debug=True)

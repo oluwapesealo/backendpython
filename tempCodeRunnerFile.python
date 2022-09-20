@@ -1,3 +1,47 @@
-a="where %s email =%s"
-print(a)
-print(a%"ogb","chi")
+from asyncio.windows_events import NULL
+from datetime import datetime,timedelta
+from urllib import request
+from sqlalchemy import create_engine
+import pypyodbc as odbc 
+import pyodbc
+import pandas as pd
+from flask import Flask,jsonify,request
+from flask_restful import Api,Resource
+from hashlib import sha256
+import jwt
+import os
+def hash(data):
+        hash_var=sha256((data).encode())
+        finalhash=hash_var.hexdigest()
+        return finalhash
+SERVER='DESKTOP-IEVPBEO'
+DATABASE='employeedb'
+DRIVER='SQL Server Native Client 11.0'
+USERNAME='chidubem'
+PASSWORD='ogbuefi'
+connect = pyodbc.connect('Driver={SQL Server};'
+            'Server=DESKTOP-IEVPBEO;'
+            'Database=employeedb;'
+            'Trusted_Connection=yes;')
+email="chidubemogbuefi@gmail.com"
+password=hash("chidubem")
+cursor = connect.cursor()
+connection_string=f'mssql://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}?driver={DRIVER}'
+connection_string=connection_string
+engine = create_engine(connection_string)
+connection=(engine.connect())
+sqltable=pd.read_sql_query(("SELECT * FROM [employeedb].[chidubem].[employe]"),connection)
+finaltable1=pd.DataFrame(sqltable)
+emailauthentication=email in finaltable1['email'].unique()
+if (emailauthentication==True):
+    passwordauthentication=cursor.execute("select password from [employeedb].[chidubem].[employe] where email=?",email)
+    for passw in passwordauthentication:
+        pass
+
+    if (passw[0]==password):
+        print("email and password correct")
+    else:
+        print("inorrect password")
+# print(finaltable1)
+# print(finaltable1.iloc[1][2])
+# # print(finaltable1.loc[0])

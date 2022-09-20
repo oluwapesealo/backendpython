@@ -1,0 +1,2 @@
+,email,staffid,body,monday,tuesday,wednesday,thursday,friday,teamlead_approval,reason_for_teamlead_decline,linemanager_approval,reason_for_linemanager_decline,datesent
+0,pese@wemabank.com,IND619,Traffic is the reason,True,True,False,False,True,,,,,
